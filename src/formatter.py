@@ -56,28 +56,30 @@ def _category_items(items: list[NewsItem], cat: str, now: datetime) -> list[News
     return grouped
 
 
-def format_category_report(
+def format_category_reports(
     items: list[NewsItem],
     cat: str,
     per_category: int,
     now_utc: datetime | None = None,
-) -> str:
-    """生成单个类别的早报文本（≤600 字符），超限从尾部删行。"""
+) -> list[str]:
+    """生成单个类别的早报文本列表。超过 600 字符（微信单条上限）自动拆分多条，
+    每条以类别头开头，保证全部条数送达。
+    """
     now = now_utc or datetime.now(timezone.utc)
     today_cn = now.astimezone(CN_TZ)
+    header = f"【{CATEGORY_LABELS[cat]}】{today_cn.month}月{today_cn.day}日早报"
 
-    lines = [f"【{CATEGORY_LABELS[cat]}】{today_cn.month}月{today_cn.day}日早报"]
+    parts: list[list[str]] = [[]]
     for i, it in enumerate(_category_items(items, cat, now)[:per_category], 1):
         line = f"{i}. {it.title}（{it.source}）"
         if it.url:
             line += f"\n   {it.url}"
-        lines.append(line)
+        candidate = "\n".join([header] + parts[-1] + [line])
+        if len(candidate) > MAX_CHARS and parts[-1]:
+            parts.append([])  # 超限且当前段非空：拆新消息
+        parts[-1].append(line)
 
-    text = "\n".join(lines)
-    while len(text) > MAX_CHARS and len(lines) > 1:
-        lines.pop()
-        text = "\n".join(lines)
-    return text
+    return ["\n".join([header] + seg) for seg in parts]
 
 
 def format_all_reports(
@@ -85,6 +87,9 @@ def format_all_reports(
     category_order: list[str],
     per_category: int,
     now_utc: datetime | None = None,
-) -> dict[str, str]:
-    """生成全部类别的早报文本，返回 {类别: 文本}。"""
-    return {cat: format_category_report(items, cat, per_category, now_utc) for cat in category_order}
+) -> dict[str, list[str]]:
+    """生成全部类别的早报文本，返回 {类别: [文本, ...]}。"""
+    return {
+        cat: format_category_reports(items, cat, per_category, now_utc)
+        for cat in category_order
+    }
