@@ -1,0 +1,31 @@
+name: daily-news
+
+on:
+  schedule:
+    # UTC 00:30 = 北京时间 08:30（中国无夏令时，恒为 UTC+8）
+    - cron: '30 0 * * *'
+  workflow_dispatch: {}  # 手动触发测试
+
+jobs:
+  push-daily-news:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run daily news push
+        run: python src/main.py
+        env:
+          WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
+          WECHAT_APP_SECRET: ${{ secrets.WECHAT_APP_SECRET }}
+          WECHAT_OPENIDS: ${{ secrets.WECHAT_OPENIDS }}
+          # 可选：客服消息失败时的兜底模板通道
+          WECHAT_TEMPLATE_ID: ${{ secrets.WECHAT_TEMPLATE_ID }}
+          NEWS_PER_CATEGORY: ${{ vars.NEWS_PER_CATEGORY }}
