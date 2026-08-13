@@ -56,30 +56,34 @@ def _category_items(items: list[NewsItem], cat: str, now: datetime) -> list[News
     return grouped
 
 
-def format_category_reports(
+def format_category_report(
     items: list[NewsItem],
     cat: str,
     per_category: int,
     now_utc: datetime | None = None,
-) -> list[str]:
-    """生成单个类别的早报文本列表。超过 600 字符（微信单条上限）自动拆分多条，
-    每条以类别头开头，保证全部条数送达。
+) -> str:
+    """生成单个类别的早报文本（≤600 字符）。
+
+    微信客服消息 48h 窗口最多下发 5 条，因此每类固定 1 条消息（4 类共 4 条），
+    600 字符装不下时从尾部删条目，宁缺毋滥。
     """
     now = now_utc or datetime.now(timezone.utc)
     today_cn = now.astimezone(CN_TZ)
-    header = f"【{CATEGORY_LABELS[cat]}】{today_cn.month}月{today_cn.day}日早报"
 
-    parts: list[list[str]] = [[]]
+    lines = [f"【{CATEGORY_LABELS[cat]}】{today_cn.month}月{today_cn.day}日早报"]
     for i, it in enumerate(_category_items(items, cat, now)[:per_category], 1):
-        line = f"{i}. {it.title}（{it.source}）"
+        # 标题 26 字截断：600 字符/条装 8 条带链接新闻，标题过长会挤掉尾部条目
+        title = it.title if len(it.title) <= 26 else it.title[:25] + "…"
+        line = f"{i}. {title}（{it.source}）"
         if it.url:
             line += f"\n   {it.url}"
-        candidate = "\n".join([header] + parts[-1] + [line])
-        if len(candidate) > MAX_CHARS and parts[-1]:
-            parts.append([])  # 超限且当前段非空：拆新消息
-        parts[-1].append(line)
+        lines.append(line)
 
-    return ["\n".join([header] + seg) for seg in parts]
+    text = "\n".join(lines)
+    while len(text) > MAX_CHARS and len(lines) > 1:
+        lines.pop()
+        text = "\n".join(lines)
+    return text
 
 
 def format_all_reports(
@@ -87,9 +91,9 @@ def format_all_reports(
     category_order: list[str],
     per_category: int,
     now_utc: datetime | None = None,
-) -> dict[str, list[str]]:
-    """生成全部类别的早报文本，返回 {类别: [文本, ...]}。"""
+) -> dict[str, str]:
+    """生成全部类别的早报文本，返回 {类别: 文本}。"""
     return {
-        cat: format_category_reports(items, cat, per_category, now_utc)
+        cat: format_category_report(items, cat, per_category, now_utc)
         for cat in category_order
     }

@@ -81,26 +81,23 @@ def main() -> int:
         log.error("所有新闻源均无内容")
         return 3
 
-    # 每个类别一条或多条消息（单条限 600 字符，超长自动拆分）
+    # 每个类别 1 条消息（客服消息 48h 窗口最多下发 5 条，4 类共 4 条安全）
     reports = format_all_reports(all_items, CATEGORY_ORDER, per_category)
-    total_msgs = sum(len(texts) for texts in reports.values())
-    for cat, texts in reports.items():
-        for i, text in enumerate(texts, 1):
-            log.info("早报[%s] 第%d条 %d 字符（%d 字节）",
-                     cat, i, len(text), len(text.encode("utf-8")))
+    for cat, text in reports.items():
+        log.info("早报[%s] %d 字符（%d 字节）",
+                 cat, len(text), len(text.encode("utf-8")))
 
     token = get_access_token(app_id, app_secret)
     failed = 0
     for openid in openids:
-        for texts in reports.values():
-            for text in texts:
-                try:
-                    send(token, openid, text)
-                except Exception as exc:  # noqa: BLE001
-                    failed += 1
-                    log.error("推送给 %s 失败: %s", openid, exc)
+        for text in reports.values():
+            try:
+                send(token, openid, text)
+            except Exception as exc:  # noqa: BLE001
+                failed += 1
+                log.error("推送给 %s 失败: %s", openid, exc)
 
-    log.info("推送完成: %d/%d 成功", len(openids) * total_msgs - failed, len(openids) * total_msgs)
+    log.info("推送完成: %d/%d 成功", len(openids) * len(reports) - failed, len(openids) * len(reports))
     return 1 if failed else 0
 
 

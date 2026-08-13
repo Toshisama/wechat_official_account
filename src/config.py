@@ -24,8 +24,8 @@ def get_openids() -> list[str]:
 
 
 def news_per_category() -> int:
-    """每类条数默认 4（每条消息 600 字符上限，4 条带链接新闻约 300 字符，留有余量）。"""
+    """每类条数默认 8（单条消息 600 字符上限内可放约 8 条带链接新闻，超限自动删尾部条目）。"""
     try:
-        return max(1, int(os.getenv("NEWS_PER_CATEGORY", "4")))
+        return max(1, int(os.getenv("NEWS_PER_CATEGORY", "8")))
     except ValueError:
-        return 4
+        return 8

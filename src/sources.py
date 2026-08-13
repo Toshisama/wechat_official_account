@@ -136,7 +136,11 @@ def fetch_huanqiu_news() -> list[NewsItem]:
 # ---------- 国内/社会 ----------
 
 def fetch_baidu_hot() -> list[NewsItem]:
-    """百度实时热搜榜：页面内嵌 JSON，取前 20 条。无发布时间，pub_time=None。"""
+    """百度实时热搜榜：页面内嵌 JSON，取前 20 条。无发布时间，pub_time=None。
+
+    不带链接：热搜词本身的搜索链接是 URL 编码长串（每条 130+ 字符），
+    600 字符/条的消息装不下几条，且用户看热搜词即可自行搜索。
+    """
     url = "https://top.baidu.com/board?tab=realtime"
     resp = _session.get(url, timeout=15)
     resp.raise_for_status()
@@ -151,8 +155,7 @@ def fetch_baidu_hot() -> list[NewsItem]:
             query = (entry.get("query") or "").strip()
             if not query:
                 continue
-            link = entry.get("rawUrl") or entry.get("url") or ""
-            items.append(NewsItem(title=query, url=link, source="百度热搜", category=CAT_CHINA, pub_time=None))
+            items.append(NewsItem(title=query, url="", source="百度热搜", category=CAT_CHINA, pub_time=None))
     return items
 
 
