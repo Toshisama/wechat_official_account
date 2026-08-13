@@ -1,6 +1,7 @@
 """微信测试号 API 封装：access_token 获取 + 客服消息推送（模板消息兜底）。"""
 from __future__ import annotations
 
+import json
 import time
 
 import requests
@@ -39,7 +40,16 @@ def get_access_token(app_id: str, app_secret: str, force: bool = False) -> str:
 
 
 def _post(url: str, token: str, payload: dict) -> dict:
-    resp = requests.post(url, params={"access_token": token}, json=payload, timeout=15)
+    # 必须用 ensure_ascii=False 直接发 UTF-8 中文：微信客服消息接口对 \uXXXX 转义
+    # 序列原样显示，不会还原成中文
+    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    resp = requests.post(
+        url,
+        params={"access_token": token},
+        data=body,
+        headers={"Content-Type": "application/json; charset=utf-8"},
+        timeout=15,
+    )
     resp.raise_for_status()
     return resp.json()
 
