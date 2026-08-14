@@ -1,4 +1,4 @@
-# 每日早报推送：GitHub Actions 定时任务（触发重新注册）
+# 每日早报推送：GitHub Actions 定时任务
 name: daily-news
 
 on:
