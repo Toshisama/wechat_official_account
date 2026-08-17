@@ -102,7 +102,8 @@ def fetch_eastmoney() -> list[NewsItem]:
             continue
         link = item.get("url") or ""
         if not link.startswith("http"):
-            link = "https://finance.eastmoney.com/a/" + (item.get("code") or "")
+            # 东财文章 URL 格式：https://finance.eastmoney.com/a/{code}.html（缺 .html 会 404）
+            link = "https://finance.eastmoney.com/a/" + (item.get("code") or "") + ".html"
         pub = None
         show_time = item.get("showTime") or ""
         m = re.match(r"(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})", show_time)
